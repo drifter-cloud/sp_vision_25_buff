@@ -29,20 +29,21 @@ io::Command Aimer::aim(
 
   auto now = std::chrono::steady_clock::now();
 
-  auto detect_now_gap = tools::delta_time(now, timestamp);
+  auto detect_now_gap = tools::delta_time(now, timestamp);// 检测延迟
   auto future = to_now ? (detect_now_gap + predict_time_) : 0.1 + predict_time_;
   double yaw, pitch;
 
-  bool angle_changed =
-    std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3;
   if (get_send_angle(target, future, bullet_speed, to_now, yaw, pitch)) {
     command.yaw = yaw;
     command.pitch = -pitch;  //世界坐标系下的pitch向上为负
+
+    bool angle_changed =std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3;
+
     if (mistake_count_ > 3) {
       switch_fanblade_ = true;
       mistake_count_ = 0;
       command.control = true;
-    } else if (std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3) {
+    } else if (angle_changed) {
       switch_fanblade_ = true;
       mistake_count_++;
       command.control = false;
@@ -86,17 +87,19 @@ auto_aim::Plan Aimer::mpc_aim(
   auto future = to_now ? (detect_now_gap + predict_time_) : 0.1 + predict_time_;
   double yaw, pitch;
 
-  bool angle_changed =
-    std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3;
+
   if (get_send_angle(target, future, bullet_speed, to_now, yaw, pitch)) {
     plan.yaw = yaw;
     plan.pitch = -pitch;  //世界坐标系下的pitch向上为负
+
+    bool angle_changed =std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3;
+
     if (mistake_count_ > 3) {
       switch_fanblade_ = true;
       mistake_count_ = 0;
       plan.control = true;
       first_in_aimer_ = true;
-    } else if (std::abs(last_yaw_ - yaw) > 5 / 57.3 || std::abs(last_pitch_ - pitch) > 5 / 57.3) {
+    } else if (angle_changed) {
       switch_fanblade_ = true;
       mistake_count_++;
       plan.control = false;

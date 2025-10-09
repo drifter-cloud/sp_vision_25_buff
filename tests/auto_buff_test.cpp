@@ -17,7 +17,7 @@
 #include "tools/plotter.hpp"
 
 const std::string keys =
-  "{help h usage ? |                        | 输出命令行参数说明 }"
+  "{help h |                        | 输出命令行参数说明 }"
   "{config-path c  | configs/sentry.yaml    | yaml配置文件的路径}"
   "{start-index s  | 0                      | 视频起始帧下标    }"
   "{end-index e    | 0                      | 视频结束帧下标    }"
@@ -57,6 +57,7 @@ int main(int argc, char * argv[])
   double last_t = -1;
 
   video.set(cv::CAP_PROP_POS_FRAMES, start_index);
+  // 跳过文本文件中前start_index帧的数据
   for (int i = 0; i < start_index; i++) {
     double t, w, x, y, z;
     text >> t >> w >> x >> y >> z;
@@ -109,7 +110,7 @@ int main(int argc, char * argv[])
       auto & p = power_runes.value();
 
       // 显示
-      for (int i = 0; i < 4; i++) tools::draw_point(img, p.target().points[i]);
+      for (int i = 0; i < 4; i++) tools::draw_point(img, p.target().points[i], {0, 0, 255}, 3);
       tools::draw_point(img, p.target().center, {0, 0, 255}, 3);
       tools::draw_point(img, p.r_center, {0, 0, 255}, 3);
 

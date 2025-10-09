@@ -21,7 +21,7 @@ public:
 
   std::optional<PowerRune> detect(cv::Mat & bgr_img);
 
-std::optional<PowerRune> detect_debug(cv::Mat & bgr_img, cv::Point2f v);
+  std::optional<PowerRune> detect_debug(cv::Mat & bgr_img, cv::Point2f v);
 
 private:
   void handle_img(const cv::Mat & bgr_img, cv::Mat & dilated_img);

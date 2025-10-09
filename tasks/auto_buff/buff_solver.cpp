@@ -7,6 +7,7 @@ cv::Matx33f Solver::rotation_matrix(double angle) const
     1, 0, 0, 0, std::cos(angle), -std::sin(angle), 0, std::sin(angle), std::cos(angle));
 }
 
+// 旋转点并填充到 OBJECT_POINTS 中
 void Solver::compute_rotated_points(std::vector<std::vector<cv::Point3f>> & object_points)
 {
   const std::vector<cv::Point3f> & base_points = object_points[0];
@@ -23,7 +24,8 @@ void Solver::compute_rotated_points(std::vector<std::vector<cv::Point3f>> & obje
   }
 }
 
-Solver::Solver(const std::string & config_path) : R_gimbal2world_(Eigen::Matrix3d::Identity())
+// 初始化参数
+Solver::Solver(const std::string & config_path) : R_gimbal2world_(Eigen::Matrix3d::Identity())// 将 R_gimbal2world_初始化为单位矩阵
 {
   auto yaml = YAML::LoadFile(config_path);
 
@@ -79,6 +81,7 @@ void Solver::solve(std::optional<PowerRune> & ps) const
     OBJECT_POINTS_FOURTH, image_points_fourth, camera_matrix_, distort_coeffs_, rvec_, tvec_, false,
     cv::SOLVEPNP_IPPE);
 
+  // buff -> camera
   Eigen::Vector3d t_buff2camera;
   cv::cv2eigen(tvec_, t_buff2camera);
   cv::Mat rmat;
@@ -86,15 +89,14 @@ void Solver::solve(std::optional<PowerRune> & ps) const
   Eigen::Matrix3d R_buff2camera;
   cv::cv2eigen(rmat, R_buff2camera);
 
-  Eigen::Vector3d blade_xyz_in_buff{{0, 0, 700e-3}};
+  Eigen::Vector3d blade_xyz_in_buff{{0, 0, 700e-3}};// 扇叶中心点
 
-  // buff -> camera
   Eigen::Vector3d xyz_in_camera = t_buff2camera;
   Eigen::Vector3d blade_xyz_in_camera = R_buff2camera * blade_xyz_in_buff + t_buff2camera;
 
   // camera -> gimbal
   Eigen::Matrix3d R_buff2gimbal = R_camera2gimbal_ * R_buff2camera;
-  Eigen::Vector3d xyz_in_gimbal = R_camera2gimbal_ * xyz_in_camera + t_camera2gimbal_;
+  Eigen::Vector3d xyz_in_gimbal = R_camera2gimbal_ * xyz_in_camera + t_camera2gimbal_;// // 能量机关原点在云台坐标系中的位置
   Eigen::Vector3d blade_xyz_in_gimbal = R_camera2gimbal_ * blade_xyz_in_camera + t_camera2gimbal_;
 
   /// gimbal -> world

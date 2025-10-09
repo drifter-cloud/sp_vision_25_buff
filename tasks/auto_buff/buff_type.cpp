@@ -71,7 +71,7 @@ PowerRune::PowerRune(
   }
 
   /// 填充FanBlade.angle
-
+  // 统一角度基准，便于排序
   double angle = atan_angle(ts[0].center);
   for (auto & t : ts) {
     t.angle = atan_angle(t.center) - angle;
@@ -79,7 +79,7 @@ PowerRune::PowerRune(
   }
 
   /// fanblades调整顺序
-
+  // _unlight 类型的扇叶仅在 fanblades 列表中补全
   std::sort(ts.begin(), ts.end(), [](const FanBlade & a, const FanBlade & b) {
     return a.angle < b.angle;
   });  // 按照 t.angle 从小到大排序 ts
