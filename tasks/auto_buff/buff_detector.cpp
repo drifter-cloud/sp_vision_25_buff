@@ -92,6 +92,8 @@ std::optional<PowerRune> Buff_Detector::detect_24(cv::Mat & bgr_img)
 
   std::vector<YOLO11_BUFF::Object> results = MODE_.get_multicandidateboxes(bgr_img);
 
+  tools::logger()->debug("[Buff_Detector] 检测到 {} 个目标", results.size());// 调试用
+
   /// 处理未获得的情况
 
   if (results.empty()) {

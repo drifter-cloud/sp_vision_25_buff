@@ -70,7 +70,20 @@ int main(int argc, char * argv[])
     if (img.empty()) break;
 
     double t, w, x, y, z;
-    text >> t >> w >> x >> y >> z;
+    if (!(text >> t >> w >> x >> y >> z)) {
+      static bool warned = false;
+      if (!warned) {
+        tools::logger()->warn("IMU数据缺失,使用默认值（单位四元数）");
+        warned = true;
+      }
+      
+      // 使用递增的时间戳和单位四元数
+      static double last_t = 0.0;
+      t = last_t + 0.033;  // 假设30fps，每帧间隔33ms
+      last_t = t;
+      
+      w = 1.0; x = 0.0; y = 0.0; z = 0.0;
+    }
     auto timestamp = t0 + std::chrono::microseconds(int(t * 1e6));
 
     /// 自瞄核心逻辑

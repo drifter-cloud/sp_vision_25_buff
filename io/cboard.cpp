@@ -19,6 +19,7 @@ CBoard::CBoard(const std::string & config_path)
   tools::logger()->info("[Cboard] Opened.");
 }
 
+// 球面线性插值（SLERP）
 Eigen::Quaterniond CBoard::imu_at(std::chrono::steady_clock::time_point timestamp)
 {
   if (data_behind_.timestamp < timestamp) data_ahead_ = data_behind_;

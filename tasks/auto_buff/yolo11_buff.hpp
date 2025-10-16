@@ -10,7 +10,6 @@
 
 namespace auto_buff
 {
-const std::vector<std::string> class_names = {"buff", "r"};
 
 class YOLO11_BUFF
 {

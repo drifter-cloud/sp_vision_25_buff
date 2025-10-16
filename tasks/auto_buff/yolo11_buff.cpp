@@ -1,7 +1,7 @@
 #include "yolo11_buff.hpp"
 
-const double ConfidenceThreshold = 0.7f;
-const double IouThreshold = 0.4f;
+const double ConfidenceThreshold = 0.7f;  //0.7->0.1
+const double IouThreshold = 0.4f;      
 namespace auto_buff
 {
 YOLO11_BUFF::YOLO11_BUFF(const std::string & config)
@@ -21,32 +21,15 @@ YOLO11_BUFF::YOLO11_BUFF(const std::string & config)
 
 std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_multicandidateboxes(cv::Mat & image)
 {
-  const int64 start = cv::getTickCount();  // 设置模型输入
+  const int64 start = cv::getTickCount(); 
 
   /// 预处理
-
-  // const float factor = fill_tensor_data_image(input_tensor, image);  // 填充图片到合适的input size
+  const float factor = fill_tensor_data_image(input_tensor, image);  // 填充图片到合适的input size
 
   if (image.empty()) {
     tools::logger()->warn("Empty img!, camera drop!");
     return std::vector<YOLO11_BUFF::Object> ();
   }
-
-  cv::Mat bgr_img = image;
-
-  auto x_scale = static_cast<double>(640) / bgr_img.rows;
-  auto y_scale = static_cast<double>(640) / bgr_img.cols;
-  auto scale = std::min(x_scale, y_scale);
-  auto h = static_cast<int>(bgr_img.rows * scale);
-  auto w = static_cast<int>(bgr_img.cols * scale);
-
-  double factor = scale;  
-
-  // preproces
-  auto input = cv::Mat(640, 640, CV_8UC3, cv::Scalar(0, 0, 0));
-  auto roi = cv::Rect(0, 0, w, h);
-  cv::resize(bgr_img, input(roi), {w, h});
-  ov::Tensor input_tensor(ov::element::u8, {1, 640, 640, 3}, input.data);
 
   /// 执行推理计算
   infer_request.infer();
@@ -85,7 +68,7 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_multicandidateboxes(cv::Mat & 
 
       // 获取关键点
       std::vector<float> keypoints;
-      cv::Mat kpts = det_output.col(i).rowRange(NUM_POINTS, 15);
+      cv::Mat kpts = det_output.col(i).rowRange(5, 5 + NUM_POINTS * 2);
       for (int j = 0; j < NUM_POINTS; ++j) {
         const float x = kpts.at<float>(j * 2 + 0, 0) * factor;
         const float y = kpts.at<float>(j * 2 + 1, 0) * factor;
@@ -146,7 +129,7 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_multicandidateboxes(cv::Mat & 
 
 std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_onecandidatebox(cv::Mat & image)
 {
-  const int64 start = cv::getTickCount();  // 设置模型输入
+  const int64 start = cv::getTickCount();  
 
   /// 预处理
   const float factor = fill_tensor_data_image(input_tensor, image);  // 填充图片到合适的input size
@@ -199,8 +182,8 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_onecandidatebox(cv::Mat & imag
     }
     object_result.push_back(obj);
 
-    /// 0.3-0.7 save
-    if (max_confidence < 0.7) save(std::to_string(start), image);
+    /// 0-0.7 save
+    // if (max_confidence < 0.7) save(std::to_string(start), image);
 
     /// 绘制关键点和连线
     cv::rectangle(image, obj.rect, cv::Scalar(255, 255, 255), 1, 8);                  // 绘制矩形框
@@ -256,7 +239,7 @@ float YOLO11_BUFF::fill_tensor_data_image(ov::Tensor & input_tensor, const cv::M
   if (scale < 1.0f) {
     // 要缩小, 那么先缩小再交换通道
     cv::warpAffine(input_image, blob_image, matrix, cv::Size(width, height));
-    convert(blob_image, blob_image, true, true);
+    convert(blob_image, blob_image, true, false);
   } else {
     // 要放大, 那么先交换通道再放大
     convert(input_image, blob_image, true, true);

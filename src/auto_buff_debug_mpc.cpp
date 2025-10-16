@@ -19,15 +19,15 @@
 
 // 定义命令行参数
 const std::string keys =
-  "{help h usage ? | | 输出命令行参数说明}"
-  "{@config-path   | | yaml配置文件路径 }";
+  "{help h usage ? |                        | 输出命令行参数说明}"
+  "{@config-path   | configs/sentry.yaml    | yaml配置文件路径 }";
 
 int main(int argc, char * argv[])
 {
   // 读取命令行参数
   cv::CommandLineParser cli(argc, argv, keys);
   auto config_path = cli.get<std::string>(0);
-  if (cli.has("help") || config_path.empty()) {
+  if (cli.has("help")) {
     cli.printMessage();
     return 0;
   }
