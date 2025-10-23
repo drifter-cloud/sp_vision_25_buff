@@ -13,9 +13,9 @@ void Buff_Detector::handle_img(const cv::Mat & bgr_img, cv::Mat & dilated_img)
   cv::cvtColor(bgr_img, gray_img, cv::COLOR_BGR2GRAY);  // 彩色图转灰度图
   // cv::imshow("gray", gray_img);  // 调试用
 
-  // 进行二值化           :把高于100变成255，低于100变成0
+  // 进行二值化 
   cv::Mat binary_img;
-  cv::threshold(gray_img, binary_img, 100, 255, cv::THRESH_BINARY);
+  cv::threshold(gray_img, binary_img, 60, 255, cv::THRESH_BINARY);  // 可根据实际情况调节阈值
   // cv::imshow("binary", binary_img);  // 调试用
 
   // 膨胀
@@ -37,10 +37,9 @@ cv::Point2f Buff_Detector::get_r_center(std::vector<FanBlade> & fanblades, cv::M
 
   cv::Point2f r_center_t = {0, 0};
   for (auto & fanblade : fanblades) {
-    auto point5 = fanblade.points[4];  // point5是扇叶的中心
-    auto point6 = fanblade.points[5];
-    r_center_t += (point6 - point5) * 1.4 + point5;  // TODO
-    // r_center_t += 4.7 * point - (4.7 - 1) * fanblade.center;
+    auto point4 = fanblade.points[4];  // 关键点5（扇叶中心）
+    auto point5 = fanblade.points[5];  // 关键点6（扇尾）
+    r_center_t += (point5 - point4) * 1.36 + point4;  // TODO
   }
   r_center_t /= float(fanblades.size());
 
@@ -48,11 +47,11 @@ cv::Point2f Buff_Detector::get_r_center(std::vector<FanBlade> & fanblades, cv::M
 
   cv::Mat dilated_img;
   handle_img(bgr_img, dilated_img);
-  double radius = cv::norm(fanblades[0].points[2] - fanblades[0].center) * 0.8;
+  double radius = cv::norm(fanblades[0].points[2] - fanblades[0].center) * 1;
   cv::Mat mask = cv::Mat::zeros(dilated_img.size(), CV_8U);  // mask
   circle(mask, r_center_t, radius, cv::Scalar(255), -1);
   bitwise_and(dilated_img, mask, dilated_img);               // 将遮罩应用于二值化图像
-  tools::draw_point(bgr_img, r_center_t, {255, 255, 0}, 5);  // 调试用
+  tools::draw_point(bgr_img, r_center_t, {255, 255, 0}, 5);  // 调试用(原始点)
   // cv::imshow("Dilated Image", dilated_img);                // 调试用
 
   /// 获取轮廓点,矩阵框筛选  TODO
@@ -104,7 +103,12 @@ std::optional<PowerRune> Buff_Detector::detect_24(cv::Mat & bgr_img)
   /// results转扇叶FanBlade
 
   std::vector<FanBlade> fanblades;
-  for (auto & result : results) fanblades.emplace_back(FanBlade(result.kpt, result.kpt[4], _light));
+  for (auto & result : results) {
+    // 修复关键点索引：关键点4是扇叶中心，直接使用result.kpt[4]
+    // result.kpt是std::vector<cv::Point2f>，每个元素已经是一个cv::Point2f对象
+    cv::Point2f keypoint4 = result.kpt[4]; // 关键点4的坐标（扇叶中心）
+    fanblades.emplace_back(FanBlade(result.kpt, keypoint4, _light));
+  }
 
   /// 生成PowerRune
   auto r_center = get_r_center(fanblades, bgr_img);
@@ -141,7 +145,8 @@ std::optional<PowerRune> Buff_Detector::detect(cv::Mat & bgr_img)
 
   std::vector<FanBlade> fanblades;
   auto result = results[0];
-  fanblades.emplace_back(FanBlade(result.kpt, result.kpt[4], _light));
+  cv::Point2f keypoint5 = result.kpt[4]; // 关键点5的坐标（扇叶中心）
+  fanblades.emplace_back(FanBlade(result.kpt, keypoint5, _light));
 
   /// 生成PowerRune
   auto r_center = get_r_center(fanblades, bgr_img);
@@ -174,8 +179,11 @@ std::optional<PowerRune> Buff_Detector::detect_debug(cv::Mat & bgr_img, cv::Poin
   /// results转扇叶FanBlade
 
   std::vector<FanBlade> fanblades_t;
-  for (auto & result : results)
-    fanblades_t.emplace_back(FanBlade(result.kpt, result.kpt[4], _light));
+  for (auto & result : results) {
+    // 修复关键点索引：关键点4是扇叶中心
+    cv::Point2f keypoint4 = result.kpt[4]; // 关键点4的坐标（扇叶中心）
+    fanblades_t.emplace_back(FanBlade(result.kpt, keypoint4, _light));
+  }
 
   /// 计算r_center,筛选fanblade
   auto r_center = get_r_center(fanblades_t, bgr_img);

@@ -1,6 +1,6 @@
 #include "yolo11_buff.hpp"
 
-const double ConfidenceThreshold = 0.7f;  //0.7->0.1
+const double ConfidenceThreshold = 0.7f;  
 const double IouThreshold = 0.4f;      
 namespace auto_buff
 {
@@ -62,20 +62,20 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_multicandidateboxes(cv::Mat & 
       box.width = static_cast<int>(ow * factor);
       box.height = static_cast<int>(oh * factor);
       boxes.push_back(box);
-
+  
       // 获取置信度
       confidences.push_back(score);
-
-      // 获取关键点
+  
+      // 获取关键点 - 修复：正确处理3个值的关键点格式
       std::vector<float> keypoints;
-      cv::Mat kpts = det_output.col(i).rowRange(5, 5 + NUM_POINTS * 2);
-      for (int j = 0; j < NUM_POINTS; ++j) {
-        const float x = kpts.at<float>(j * 2 + 0, 0) * factor;
-        const float y = kpts.at<float>(j * 2 + 1, 0) * factor;
-        // const float s = kpts.at<float>(j * 3 + 2, 0);
-        keypoints.push_back(x);
-        keypoints.push_back(y);
-        // keypoints.push_back(s);
+      cv::Mat kpts = det_output.col(i).rowRange(5, 5 + NUM_POINTS * 3); // 改为3个值
+      for (int j = 0; j < NUM_POINTS; j++) {
+          // 修改前：keypoints.push_back(kpts.at<float>(j * 2, 0));
+          // 修改后：每个关键点有3个值(x,y,visibility)，需要跳过visibility值
+          const float x = kpts.at<float>(j * 3 + 0, 0) * factor;
+          const float y = kpts.at<float>(j * 3 + 1, 0) * factor;
+          keypoints.push_back(x);
+          keypoints.push_back(y);
       }
       objects_keypoints.push_back(keypoints);
     }
@@ -93,10 +93,12 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_multicandidateboxes(cv::Mat & 
     obj.prob = confidences[index];
 
     const std::vector<float> & keypoint = objects_keypoints[index];
-    for (int i = 0; i < NUM_POINTS; ++i) {
-      const float x_coord = keypoint[i * 2];
-      const float y_coord = keypoint[i * 2 + 1];
-      obj.kpt.push_back(cv::Point2f(x_coord, y_coord));
+    for (int j = 0; j < NUM_POINTS; ++j) {
+        // 修改前：const float x_coord = keypoint[j * 2];
+        // 修改后：每个关键点有3个值，但keypoints中只存储了x和y
+        const float x_coord = keypoint[j * 2];
+        const float y_coord = keypoint[j * 2 + 1];
+        obj.kpt.push_back(cv::Point2f(x_coord, y_coord));
     }
     object_result.push_back(obj);
 
@@ -138,12 +140,12 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_onecandidatebox(cv::Mat & imag
 
   infer_request.infer();
 
-  /// 处理推理计算结果  output 输出格式是[17,8400], 每列代表一个框(即最多有8400个框), 前面4行分别是[cx, cy, ow, oh], 中间score, 最后6*2关键点
+  /// 处理推理计算结果  output 输出格式是[17,8400], 每列代表一个框(即最多有8400个框), 前面4行分别是[cx, cy, ow, oh], 中间score, 最后6*3关键点(x,y坐标+是否隐藏)
 
   const ov::Tensor output = infer_request.get_output_tensor();  // 获得推理结果
   const ov::Shape output_shape = output.get_shape();
   const float * output_buffer = output.data<const float>();
-  const int out_rows = output_shape[1];  // 获得"output"节点的rows 17
+  const int out_rows = output_shape[1];  // 获得"output"节点的rows 23
   const int out_cols = output_shape[2];  // 获得"output"节点的cols 8400
   const cv::Mat det_output(
     out_rows, out_cols, CV_32F, (float *)output_buffer);  // output_buff类型转换
@@ -173,12 +175,14 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_onecandidatebox(cv::Mat & imag
     obj.rect.height = static_cast<int>(oh * factor);
     // 获取置信度
     obj.prob = max_confidence;
+    // 同样需要修改get_onecandidatebox方法中的关键点解析
     // 获取关键点
-    cv::Mat kpts = det_output.col(best_index).rowRange(5, 5 + NUM_POINTS * 2);
+    cv::Mat kpts = det_output.col(best_index).rowRange(5, 5 + NUM_POINTS * 3); // 改为3个值
     for (int i = 0; i < NUM_POINTS; ++i) {
-      const float x = kpts.at<float>(i * 2 + 0, 0) * factor;
-      const float y = kpts.at<float>(i * 2 + 1, 0) * factor;
-      obj.kpt.push_back(cv::Point2f(x, y));
+        const float x = kpts.at<float>(i * 3 + 0, 0) * factor; 
+        const float y = kpts.at<float>(i * 3 + 1, 0) * factor; 
+        // const float visibility = kpts.at<float>(i * 3 + 2, 0); // 可选：读取可见性
+        obj.kpt.push_back(cv::Point2f(x, y));
     }
     object_result.push_back(obj);
 
@@ -189,26 +193,22 @@ std::vector<YOLO11_BUFF::Object> YOLO11_BUFF::get_onecandidatebox(cv::Mat & imag
     cv::rectangle(image, obj.rect, cv::Scalar(255, 255, 255), 1, 8);                  // 绘制矩形框
     const std::string label = "buff:" + std::to_string(max_confidence).substr(0, 4);  // 绘制标签
     const cv::Size textSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, nullptr);
-    const cv::Rect textBox(
-      obj.rect.tl().x, obj.rect.tl().y - 15, textSize.width, textSize.height + 5);
+    const cv::Rect textBox(obj.rect.tl().x, obj.rect.tl().y - 15, textSize.width, textSize.height + 5);
     cv::rectangle(image, textBox, cv::Scalar(0, 255, 255), cv::FILLED);
-    cv::putText(
-      image, label, cv::Point(obj.rect.tl().x, obj.rect.tl().y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5,
+    cv::putText(image, label, cv::Point(obj.rect.tl().x, obj.rect.tl().y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5,
       cv::Scalar(0, 0, 0));
     const int radius = 2;  // 绘制关键点
     const cv::Size & shape = image.size();
     for (int i = 0; i < NUM_POINTS; ++i) {
       cv::circle(image, obj.kpt[i], radius, cv::Scalar(255, 255, 0), -1, cv::LINE_AA);
-      cv::putText(
-        image, std::to_string(i + 1), obj.kpt[i] + cv::Point2f(5, -5), cv::FONT_HERSHEY_SIMPLEX,
+      cv::putText(image, std::to_string(i + 1), obj.kpt[i] + cv::Point2f(5, -5), cv::FONT_HERSHEY_SIMPLEX,
         0.5, cv::Scalar(255, 255, 0), 1, cv::LINE_AA);
     }
   }
 
   /// 计算FPS
   const float t = (cv::getTickCount() - start) / static_cast<float>(cv::getTickFrequency());
-  cv::putText(
-    image, cv::format("FPS: %.2f", 1.0 / t), cv::Point(20, 40), cv::FONT_HERSHEY_PLAIN, 2.0,
+  cv::putText(image, cv::format("FPS: %.2f", 1.0 / t), cv::Point(20, 40), cv::FONT_HERSHEY_PLAIN, 2.0,
     cv::Scalar(255, 0, 0), 2, 8);
   return object_result;
 }
@@ -228,8 +228,17 @@ float YOLO11_BUFF::fill_tensor_data_image(ov::Tensor & input_tensor, const cv::M
   const size_t num_channels = tensor_shape[1];
   const size_t height = tensor_shape[2];
   const size_t width = tensor_shape[3];
+  
+  // 将BGR图像转换为灰度图
+  cv::Mat gray_img;
+  cv::cvtColor(input_image, gray_img, cv::COLOR_BGR2GRAY);
+  
+  // 将灰度图转换为3通道图像（重复灰度通道）
+  cv::Mat three_channel_gray;
+  cv::cvtColor(gray_img, three_channel_gray, cv::COLOR_GRAY2BGR);
+
   // 缩放因子
-  const float scale = std::min(height / float(input_image.rows), width / float(input_image.cols));
+  const float scale = std::min(height / float(three_channel_gray.rows), width / float(three_channel_gray.cols));
   const cv::Matx23f matrix{
     scale, 0.0, 0.0, 0.0, scale, 0.0,
   };
@@ -238,11 +247,11 @@ float YOLO11_BUFF::fill_tensor_data_image(ov::Tensor & input_tensor, const cv::M
   // 如果不在意这点速度提升的可以固定一种做法(两个if分支随便一个都可以)
   if (scale < 1.0f) {
     // 要缩小, 那么先缩小再交换通道
-    cv::warpAffine(input_image, blob_image, matrix, cv::Size(width, height));
+    cv::warpAffine(three_channel_gray, blob_image, matrix, cv::Size(width, height));
     convert(blob_image, blob_image, true, false);
   } else {
     // 要放大, 那么先交换通道再放大
-    convert(input_image, blob_image, true, true);
+    convert(three_channel_gray, blob_image, true, false);
     cv::warpAffine(blob_image, blob_image, matrix, cv::Size(width, height));
   }
 
@@ -260,7 +269,7 @@ float YOLO11_BUFF::fill_tensor_data_image(ov::Tensor & input_tensor, const cv::M
   return 1 / scale;
 }
 
-void YOLO11_BUFF::printInputAndOutputsInfo(const ov::Model & network)
+void YOLO11_BUFF::printInputAndOutputsInfo(const ov::Model & network) // 未调用
 {
   std::cout << "model name: " << network.get_friendly_name() << std::endl;
 
@@ -293,7 +302,7 @@ void YOLO11_BUFF::printInputAndOutputsInfo(const ov::Model & network)
   }
 }
 
-void YOLO11_BUFF::save(const std::string & programName, const cv::Mat & image)
+void YOLO11_BUFF::save(const std::string & programName, const cv::Mat & image) // 未调用
 {
   const std::filesystem::path saveDir = "../result/";
   if (!std::filesystem::exists(saveDir)) {

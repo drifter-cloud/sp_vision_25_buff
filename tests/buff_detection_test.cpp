@@ -21,7 +21,7 @@ int main(int argc, char * argv[])
     }
 
     // 执行目标检测
-    auto result = detector.detect_24(img);
+    auto result = detector.detect(img);
     
     // 可视化结果
     if (result.has_value()) {
@@ -42,19 +42,19 @@ int main(int argc, char * argv[])
         cv::circle(img, p.r_center, 5, cv::Scalar(255, 0, 0), -1);
     }
 
-    // 创建输出目录
-    std::filesystem::create_directories("/home/moran/bbs/sp_vision_25/assets/detection_results");
+    // // 创建输出目录
+    // std::filesystem::create_directories("/home/moran/bbs/sp_vision_25/assets/detection_results");
 
-    // 保存结果图片到指定目录
-    std::string input_path = argv[1];
-    size_t last_slash = input_path.find_last_of("/\\");
-    std::string input_filename = (last_slash != std::string::npos) ? input_path.substr(last_slash + 1) : input_path;
-    size_t dot_pos = input_filename.find_last_of(".");
-    std::string base_name = (dot_pos != std::string::npos) ? input_filename.substr(0, dot_pos) : input_filename;
+    // // 保存结果图片到指定目录
+    // std::string input_path = argv[1];
+    // size_t last_slash = input_path.find_last_of("/\\");
+    // std::string input_filename = (last_slash != std::string::npos) ? input_path.substr(last_slash + 1) : input_path;
+    // size_t dot_pos = input_filename.find_last_of(".");
+    // std::string base_name = (dot_pos != std::string::npos) ? input_filename.substr(0, dot_pos) : input_filename;
     
-    std::string output_filename = "/home/moran/bbs/sp_vision_25/assets/detection_results/" + base_name + "_result.jpg";
-    cv::imwrite(output_filename, img);
-    tools::logger()->info("检测结果已保存为: {}", output_filename);
+    // std::string output_filename = "/home/moran/bbs/sp_vision_25/assets/detection_results/" + base_name + "_result.jpg";
+    // cv::imwrite(output_filename, img);
+    // tools::logger()->info("检测结果已保存为: {}", output_filename);
 
   // 显示结果
     cv::imshow("Detection Result", img);

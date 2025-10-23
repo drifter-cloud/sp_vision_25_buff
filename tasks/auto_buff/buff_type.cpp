@@ -25,44 +25,44 @@ PowerRune::PowerRune(
 
   // 只有一个fanblade，就为target
   if (light_num == 1) ts[0].type = _target;
-  // 没有新亮起来的fanblade
-  else if (last_powerrune.has_value() && ts.size() == last_powerrune.value().light_num) {
-    auto last_target_center = last_powerrune.value().fanblades[0].center;
-    auto target_fanblade_it = ts.begin();  // 初始化为 fanblades 的第一个元素
-    float min_distance = norm(ts[0].center - last_target_center);
-    for (auto it = ts.begin(); it != ts.end(); ++it) {
-      float distance = norm(it->center - last_target_center);
-      if (distance < min_distance) {
-        min_distance = distance;
-        target_fanblade_it = it;  // 更新最近的 fanblade 的迭代器
-      }
-    }
-    target_fanblade_it->type = _target;  // 设置最近的 fanblade 的 type
-    std::iter_swap(ts.begin(), target_fanblade_it);
-  }
-  // 有新亮起来的fanblade
-  else if (last_powerrune.has_value() && light_num == last_powerrune.value().light_num + 1) {
-    auto last_fanblades = last_powerrune.value().fanblades;
-    float max_min_distance = -1.0f;        // 初始化最大最小距离为-1
-    auto target_fanblade_it = ts.begin();  // 用于存储目标 fanblade 的迭代器
-    for (auto it = ts.begin(); it != ts.end(); ++it) {
-      float min_distance = std::numeric_limits<float>::max();  // 初始化最小距离为最大浮点数
-      // 计算当前 fanblade 到 last_fanblades 中每个 fanblade 的最小距离
-      for (const auto & last_fanblade : last_fanblades) {
-        if (last_fanblade.type == _unlight) continue;
-        float distance = norm(it->center - last_fanblade.center);
-        if (distance < min_distance) {
-          min_distance = distance;
-        }
-      }
-      if (min_distance > max_min_distance) {
-        max_min_distance = min_distance;
-        target_fanblade_it = it;
-      }
-    }
-    target_fanblade_it->type = _target;
-    std::iter_swap(ts.begin(), target_fanblade_it);
-  }
+  // // 没有新亮起来的fanblade
+  // else if (last_powerrune.has_value() && ts.size() == last_powerrune.value().light_num) {
+  //   auto last_target_center = last_powerrune.value().fanblades[0].center;
+  //   auto target_fanblade_it = ts.begin();  // 初始化为 fanblades 的第一个元素
+  //   float min_distance = norm(ts[0].center - last_target_center);
+  //   for (auto it = ts.begin(); it != ts.end(); ++it) {
+  //     float distance = norm(it->center - last_target_center);
+  //     if (distance < min_distance) {
+  //       min_distance = distance;
+  //       target_fanblade_it = it;  // 更新最近的 fanblade 的迭代器
+  //     }
+  //   }
+  //   target_fanblade_it->type = _target;  // 设置最近的 fanblade 的 type
+  //   std::iter_swap(ts.begin(), target_fanblade_it);
+  // }
+  // // 有新亮起来的fanblade
+  // else if (last_powerrune.has_value() && light_num == last_powerrune.value().light_num + 1) {
+  //   auto last_fanblades = last_powerrune.value().fanblades;
+  //   float max_min_distance = -1.0f;        // 初始化最大最小距离为-1
+  //   auto target_fanblade_it = ts.begin();  // 用于存储目标 fanblade 的迭代器
+  //   for (auto it = ts.begin(); it != ts.end(); ++it) {
+  //     float min_distance = std::numeric_limits<float>::max();  // 初始化最小距离为最大浮点数
+  //     // 计算当前 fanblade 到 last_fanblades 中每个 fanblade 的最小距离
+  //     for (const auto & last_fanblade : last_fanblades) {
+  //       if (last_fanblade.type == _unlight) continue;
+  //       float distance = norm(it->center - last_fanblade.center);
+  //       if (distance < min_distance) {
+  //         min_distance = distance;
+  //       }
+  //     }
+  //     if (min_distance > max_min_distance) {
+  //       max_min_distance = min_distance;
+  //       target_fanblade_it = it;
+  //     }
+  //   }
+  //   target_fanblade_it->type = _target;
+  //   std::iter_swap(ts.begin(), target_fanblade_it);
+  // }
   // error
   else {
     tools::logger()->debug("[PowerRune] 识别出错!");

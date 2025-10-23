@@ -33,19 +33,19 @@ Gimbal::~Gimbal()
   serial_.close();
 }
 
-GimbalMode Gimbal::mode() const
+GimbalMode Gimbal::mode() const //未调用
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return mode_;
 }
 
-GimbalState Gimbal::state() const
+GimbalState Gimbal::state() const // 外部调用
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return state_;
 }
 
-std::string Gimbal::str(GimbalMode mode) const
+std::string Gimbal::str(GimbalMode mode) const //未调用
 {
   switch (mode) {
     case GimbalMode::IDLE:
@@ -61,7 +61,7 @@ std::string Gimbal::str(GimbalMode mode) const
   }
 }
 
-Eigen::Quaterniond Gimbal::q(std::chrono::steady_clock::time_point t)
+Eigen::Quaterniond Gimbal::q(std::chrono::steady_clock::time_point t)// 外部调用
 {
   while (true) {
     auto [q_a, t_a] = queue_.pop();
@@ -77,7 +77,7 @@ Eigen::Quaterniond Gimbal::q(std::chrono::steady_clock::time_point t)
   }
 }
 
-void Gimbal::send(io::VisionToGimbal VisionToGimbal)
+void Gimbal::send(io::VisionToGimbal VisionToGimbal) //未调用
 {
   tx_data_.mode = VisionToGimbal.mode;
   tx_data_.yaw = VisionToGimbal.yaw;
